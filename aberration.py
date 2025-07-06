@@ -4,13 +4,10 @@ from math import factorial as ft #saving characters
 import matplotlib.pyplot as plt
 
 class Aberration:
-    def __init__(self, n: int, m: int):
+    def __init__(self, m: int, n: int):
         #indexes the polynomial
         self.n = n
         self.m = m # can be positive (even zernike) or negative (odd zernike)
-        
-        if self.m == 0: 
-            raise Exception("No spherical zernike polynomials!") ##
     
     def _radial_polynomial(self, r: float): #r
         
@@ -21,11 +18,12 @@ class Aberration:
         
         rad_total = 0
         for k in range(int((_n - _m)/2 + 1)): #k is a dummy variable
-            coeff = ((-1) ** k * ft(_n-k)) / (ft(k) * ft((_n + _m)/2 - k) * ft((_n - _m)/2 - k))
+            coeff = ((-1) ** k * ft(_n-k)) / (ft(k) * ft((_n + _m)//2 - k) * ft((_n - _m)//2 - k))
+            print(coeff)
             term = coeff * r ** (_n - 2*k)
             rad_total += term
         
-        return rad_total / np.max(np.abs(rad_total))
+        return rad_total 
             
     def _zernike(self, r: float, theta: float):
         if self.m > 0: #even 
@@ -60,5 +58,5 @@ class Aberration:
         pass
     
 if __name__ == "__main__":
-    ab = Aberration(0, 2)
-    ab._kernel(10, 10)
+    ab = Aberration(0, 4)
+    ab._kernel(100, 100)
