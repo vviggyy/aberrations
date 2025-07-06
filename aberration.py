@@ -1,5 +1,6 @@
 #import pillow
 import numpy as np
+from numpy.fft import fft2, fftshift, ifftshift, ifft2
 from math import factorial as ft #saving characters
 import matplotlib.pyplot as plt
 
@@ -53,10 +54,23 @@ class Aberration:
         plt.colorbar()
         plt.title(f"Zernike mode n={self.n}, m={self.m}")
         plt.show()
-            
+        
+        return z
+    
+    def _psf(self, w: int, l: int): #generate the point spread function of the aberrated pupil
+        
+        kern = self._kernel(w, l)
+        psf = np.abs(fftshift(fft2(kern))) #no need to shift kernel b4 fft bc we constructed it centered at zero above
+        
+        plt.imshow(psf, cmap='seismic')
+        plt.colorbar()
+        plt.title(f"Zernike mode n={self.n}, m={self.m}")
+        plt.show()
+        
+                
     def _convolve(self, img):
         pass
     
 if __name__ == "__main__":
-    ab = Aberration(0, 4)
-    ab._kernel(100, 100)
+    ab = Aberration(2, 2)
+    ab._psf(50, 50)
