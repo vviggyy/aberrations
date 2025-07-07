@@ -1,14 +1,16 @@
-#import pillow
+from PIL import Image
 import numpy as np
-from numpy.fft import fft2, fftshift, ifftshift, ifft2
+from numpy.fft import fft2, fftshift
+from scipy.signal import convolve2d
 from math import factorial as ft #saving characters
 import matplotlib.pyplot as plt
 
 class Aberration:
-    def __init__(self, m: int, n: int):
+    def __init__(self, m: int, n: int, plots: bool = False):
         #indexes the polynomial
         self.n = n
         self.m = m # can be positive (even zernike) or negative (odd zernike)
+        #TODO just have the psf made on init with plots toggleable
     
     def _radial_polynomial(self, r: float): #r
         
@@ -20,7 +22,6 @@ class Aberration:
         rad_total = 0
         for k in range(int((_n - _m)/2 + 1)): #k is a dummy variable
             coeff = ((-1) ** k * ft(_n-k)) / (ft(k) * ft((_n + _m)//2 - k) * ft((_n - _m)//2 - k))
-            print(coeff)
             term = coeff * r ** (_n - 2*k)
             rad_total += term
         
@@ -48,8 +49,7 @@ class Aberration:
                 r = np.sqrt(xcoor **2 + ycoor **2 )
                 theta = np.arctan2(ycoor, xcoor)
                 z[i, j] = self._zernike(r, theta)
-        
-        print(z)
+
         plt.imshow(z, cmap='seismic', extent=[-l/2, l/2, -w/2, w/2])
         plt.colorbar()
         plt.title(f"Zernike mode n={self.n}, m={self.m}")
@@ -67,10 +67,32 @@ class Aberration:
         plt.title(f"Zernike mode n={self.n}, m={self.m}")
         plt.show()
         
-                
-    def _convolve(self, img):
-        pass
+        return psf
     
+    def to_grayscale(self, img): 
+        return np.dot(img[:, :, :3], [0.2989, 0.5870, 0.1140]) #standard luminance formula from rgb
+    
+    def _convolve(self,psf, img_path: str ):
+        
+        img = Image.open(img_path)
+        img_arr = np.array(img)
+        
+        grey = self.to_grayscale(img_arr) #TODO make this work with 3 channel RGB. need to convolve with each color freq
+
+        processed = convolve2d(grey, psf, mode="same", boundary="symm")
+        fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+
+        axes[0].imshow(grey, cmap='gray')
+        axes[0].set_title("Unprocessed")
+
+        axes[1].imshow(processed, cmap='gray')
+        axes[1].set_title("Processed")
+
+        plt.tight_layout()
+        plt.show()
+    
+        
 if __name__ == "__main__":
-    ab = Aberration(2, 2)
-    ab._psf(50, 50)
+    ab = Aberration(0, 2) #m, n #TODO i wonder how i'll manage combos?
+    psf = ab._psf(10, 10)
+    ab._convolve(psf, img_path="in/hq720.jpg")
