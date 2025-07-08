@@ -61,8 +61,9 @@ class Aberration:
     
     def _psf(self, w: int, l: int): #generate the point spread function of the aberrated pupil
         
-        kern = self._kernel(w, l)
-        psf = np.abs(fftshift(fft2(kern))) #no need to shift kernel b4 fft bc we constructed it centered at zero above
+        kern = self._kernel(w, l) #phase map 
+        pupil = np.exp(1j * kern) #aberrated pupil function
+        psf = np.abs(fftshift(fft2(pupil))) ** 2 #no need to shift kernel b4 fft bc we constructed it centered at zero above
         
         if self.plots:
             plt.imshow(psf, cmap='seismic')
@@ -70,7 +71,7 @@ class Aberration:
             plt.title(f"Zernike mode n={self.n}, m={self.m}")
             plt.show()
         
-        return psf
+        return psf / np.sum(psf)
     
     def to_grayscale(self, img): 
         return np.dot(img[:, :, :3], [0.2989, 0.5870, 0.1140]) #standard luminance formula from rgb
@@ -82,7 +83,7 @@ class Aberration:
         
         grey = self.to_grayscale(img_arr) #TODO make this work with 3 channel RGB. need to convolve with each color freq
 
-        processed = convolve2d(grey, psf, mode="full", boundary="fill")
+        processed = convolve2d(grey, psf, mode="same", boundary="fill")
         fig, axes = plt.subplots(1, 2, figsize=(8, 4))
 
         axes[0].imshow(grey, cmap='gray')
@@ -96,6 +97,6 @@ class Aberration:
     
         
 if __name__ == "__main__":
-    ab = Aberration(0, 2) #m, n #TODO i wonder how i'll manage combos?
-    psf = ab._psf(10, 10)
+    ab = Aberration(1, 3, plots= True) #m, n #TODO i wonder how i'll manage combos?
+    psf = ab._psf(256, 256)
     ab._convolve(psf, img_path="in/hq720.jpg")
