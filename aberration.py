@@ -11,6 +11,7 @@ class Aberration:
         self.n = n
         self.m = m # can be positive (even zernike) or negative (odd zernike)
         #TODO just have the psf made on init with plots toggleable
+        self.plots = plots
     
     def _radial_polynomial(self, r: float): #r
         
@@ -50,10 +51,11 @@ class Aberration:
                 theta = np.arctan2(ycoor, xcoor)
                 z[i, j] = self._zernike(r, theta)
 
-        plt.imshow(z, cmap='seismic', extent=[-l/2, l/2, -w/2, w/2])
-        plt.colorbar()
-        plt.title(f"Zernike mode n={self.n}, m={self.m}")
-        plt.show()
+        if self.plots:
+            plt.imshow(z, cmap='seismic', extent=[-l/2, l/2, -w/2, w/2])
+            plt.colorbar()
+            plt.title(f"Zernike mode n={self.n}, m={self.m}")
+            plt.show()
         
         return z
     
@@ -62,10 +64,11 @@ class Aberration:
         kern = self._kernel(w, l)
         psf = np.abs(fftshift(fft2(kern))) #no need to shift kernel b4 fft bc we constructed it centered at zero above
         
-        plt.imshow(psf, cmap='seismic')
-        plt.colorbar()
-        plt.title(f"Zernike mode n={self.n}, m={self.m}")
-        plt.show()
+        if self.plots:
+            plt.imshow(psf, cmap='seismic')
+            plt.colorbar()
+            plt.title(f"Zernike mode n={self.n}, m={self.m}")
+            plt.show()
         
         return psf
     
@@ -79,7 +82,7 @@ class Aberration:
         
         grey = self.to_grayscale(img_arr) #TODO make this work with 3 channel RGB. need to convolve with each color freq
 
-        processed = convolve2d(grey, psf, mode="same", boundary="symm")
+        processed = convolve2d(grey, psf, mode="full", boundary="fill")
         fig, axes = plt.subplots(1, 2, figsize=(8, 4))
 
         axes[0].imshow(grey, cmap='gray')
