@@ -105,9 +105,9 @@ class Aberration:
         return
          
 if __name__ == "__main__":
-    ab = Aberration(0, 2, plots= True) #m, n #TODO i wonder how i'll manage combos?
+    ab = Aberration(2, 2, plots= True) #m, n #TODO i wonder how i'll manage combos?
     psf = ab._psf(50, 50)
     proces = ab._convolve(psf, img_path="in/hq720.jpg")
     
     #save jpg
-    ab._save(proces, "defocus50.jpg")
+    ab._save(proces, "astigmatism50.jpg")
