@@ -76,27 +76,38 @@ class Aberration:
     def to_grayscale(self, img): 
         return np.dot(img[:, :, :3], [0.2989, 0.5870, 0.1140]) #standard luminance formula from rgb
     
-    def _convolve(self,psf, img_path: str ):
+    def _convolve(self, psf, img_path: str ):
         
         img = Image.open(img_path)
         img_arr = np.array(img)
         
         grey = self.to_grayscale(img_arr) #TODO make this work with 3 channel RGB. need to convolve with each color freq
-
         processed = convolve2d(grey, psf, mode="same", boundary="fill")
-        fig, axes = plt.subplots(1, 2, figsize=(8, 4))
-
-        axes[0].imshow(grey, cmap='gray')
-        axes[0].set_title("Unprocessed")
-
-        axes[1].imshow(processed, cmap='gray')
-        axes[1].set_title("Processed")
-
-        plt.tight_layout()
-        plt.show()
-    
         
+        if self.plots:
+            fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+            axes[0].imshow(grey, cmap='gray')
+            axes[0].set_title("Unprocessed")
+            axes[1].imshow(processed, cmap='gray')
+            axes[1].set_title("Processed")
+            plt.tight_layout()
+            plt.show()
+
+        return processed
+    
+    def _save(self, arr, filename):
+        im = (arr - np.min(arr)) / np.max(arr)
+        im = (im * 255).astype(np.uint8) #convert for PIL
+        pil_img = Image.fromarray(im)
+        
+        pil_img.save(f"out/{filename}")
+        
+        return
+         
 if __name__ == "__main__":
-    ab = Aberration(1, 3, plots= True) #m, n #TODO i wonder how i'll manage combos?
-    psf = ab._psf(256, 256)
-    ab._convolve(psf, img_path="in/hq720.jpg")
+    ab = Aberration(0, 2, plots= True) #m, n #TODO i wonder how i'll manage combos?
+    psf = ab._psf(50, 50)
+    proces = ab._convolve(psf, img_path="in/hq720.jpg")
+    
+    #save jpg
+    ab._save(proces, "defocus50.jpg")
