@@ -2,16 +2,17 @@ from PIL import Image
 import numpy as np
 from numpy.fft import fft2, fftshift
 from scipy.signal import convolve2d
-from math import factorial as ft #saving characters
+from math import factorial as fact #saving characters
 import matplotlib.pyplot as plt
 
 class Aberration:
-    def __init__(self, m: int, n: int, plots: bool = False):
+    def __init__(self, m: int, n: int, size: int = 50, plots: bool = False):
         #indexes the polynomial
         self.n = n
         self.m = m # can be positive (even zernike) or negative (odd zernike)
-        #TODO just have the psf made on init with plots toggleable
         self.plots = plots
+        
+        self.psf = self._psf(size, size)
     
     def _radial_polynomial(self, r: float): #r
         
@@ -22,7 +23,7 @@ class Aberration:
         
         rad_total = 0
         for k in range(int((_n - _m)/2 + 1)): #k is a dummy variable
-            coeff = ((-1) ** k * ft(_n-k)) / (ft(k) * ft((_n + _m)//2 - k) * ft((_n - _m)//2 - k))
+            coeff = ((-1) ** k * fact(_n-k)) / (fact(k) * fact((_n + _m)//2 - k) * fact((_n - _m)//2 - k))
             term = coeff * r ** (_n - 2*k)
             rad_total += term
         
@@ -47,7 +48,7 @@ class Aberration:
                 xcoor = xval[i, j]
                 ycoor = yval[i, j]
                 
-                r = np.sqrt(xcoor **2 + ycoor **2 )
+                r = np.sqrt(xcoor **2 + ycoor **2 ) #convert to polar
                 theta = np.arctan2(ycoor, xcoor)
                 z[i, j] = self._zernike(r, theta)
 
@@ -70,44 +71,55 @@ class Aberration:
             plt.colorbar()
             plt.title(f"Zernike mode n={self.n}, m={self.m}")
             plt.show()
-        
+                
         return psf / np.sum(psf)
     
     def to_grayscale(self, img): 
-        return np.dot(img[:, :, :3], [0.2989, 0.5870, 0.1140]) #standard luminance formula from rgb
+        return np.dot(img[:, :, :3], [0.2989, 0.5870, 0.1140]) #standard luminance formula from RGB
     
-    def _convolve(self, psf, img_path: str ):
+    def to_uint8(self, arr): #for display 
+        im = (arr - np.min(arr)) / np.max(arr)
+        im = (im * 255).astype(np.uint8) #convert for PIL
+        return im
+
+    def _convolve(self, img_path: str ):
         
         img = Image.open(img_path)
         img_arr = np.array(img)
+        im_dims = len(img_arr.shape)
         
-        grey = self.to_grayscale(img_arr) #TODO make this work with 3 channel RGB. need to convolve with each color freq
-        processed = convolve2d(grey, psf, mode="same", boundary="fill")
+        assert im_dims >= 2, "Invalid input image." #either greyscale 2d or 2d image w RGB channels
+        
+        if im_dims == 3: #convolve with each channel
+            RGBconvolve = lambda channel: convolve2d(channel, self.psf, mode="same", boundary="fill")
+            
+            processed_img = [RGBconvolve(img_arr[:, :, channel_idx]) for channel_idx in range(3)]
+            proc_uint8 = np.stack([self.to_uint8(processed_img[i]) for i in range(3)], axis=-1)
+        else:
+            processed = convolve2d(img_arr, self.psf, mode="same", boundary="fill")
+            proc_uint8 = self.to_uint8(processed)
         
         if self.plots:
             fig, axes = plt.subplots(1, 2, figsize=(8, 4))
-            axes[0].imshow(grey, cmap='gray')
+            axes[0].imshow(self.to_uint8(img_arr), cmap='gray')
             axes[0].set_title("Unprocessed")
-            axes[1].imshow(processed, cmap='gray')
+            axes[1].imshow(proc_uint8, cmap='gray')
             axes[1].set_title("Processed")
             plt.tight_layout()
             plt.show()
 
-        return processed
+        return proc_uint8
     
     def _save(self, arr, filename):
-        im = (arr - np.min(arr)) / np.max(arr)
-        im = (im * 255).astype(np.uint8) #convert for PIL
-        pil_img = Image.fromarray(im)
-        
-        pil_img.save(f"out/{filename}")
+        im_uint8 = self.to_uint8(arr)
+        pil_im = Image.fromarray(im_uint8)
+        pil_im.save(f"out/{filename}")
         
         return
          
 if __name__ == "__main__":
-    ab = Aberration(2, 2, plots= True) #m, n #TODO i wonder how i'll manage combos?
-    psf = ab._psf(50, 50)
-    proces = ab._convolve(psf, img_path="in/hq720.jpg")
+    ab = Aberration(2, 2, size = 50, plots= True)
+    proces = ab._convolve(img_path="in/hq720.jpg")
     
     #save jpg
     ab._save(proces, "astigmatism50.jpg")
