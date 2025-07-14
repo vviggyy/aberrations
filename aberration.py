@@ -116,10 +116,3 @@ class Aberration:
         pil_im.save(f"out/{filename}")
         
         return
-         
-if __name__ == "__main__":
-    ab = Aberration(2, 2, size = 50, plots= True)
-    proces = ab._convolve(img_path="in/hq720.jpg")
-    
-    #save jpg
-    ab._save(proces, "astigmatism50.jpg")
